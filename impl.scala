@@ -65,7 +65,7 @@ private[tm] object TMImpl {
     case None.type => tape
 
   type FindAction[s <: Int, c <: String, actions <: Actions] = actions match
-    case (sf, cf, st, ct, m) :+: rest =>
+    case Action[sf, cf, st, ct, m] :+: rest =>
       (sf == s && cf == c) match
         case true => Some[(st, ct, m)]
         case false => FindAction[s, c, rest]
