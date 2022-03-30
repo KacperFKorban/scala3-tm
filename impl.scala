@@ -9,11 +9,11 @@ import scala.util.chaining
 private[tm] object TMImpl {
 
   sealed trait Tap
-  case class Tape[Left <: CharChain, Right <: CharChain]() extends Tap
+  class Tape[Left <: CharChain, Right <: CharChain] extends Tap
 
   sealed trait CharChain
-  case class Eps() extends CharChain
-  case class CharCons[c <: String, rest <: CharChain]() extends CharChain
+  class Eps extends CharChain
+  class CharCons[c <: String, rest <: CharChain] extends CharChain
   infix type :|:[c <: String, rest <: CharChain] = CharCons[c, rest]
 
   type Result[tp <: Tap] = tp match
