@@ -13,8 +13,7 @@ private[tm] object TMImpl {
 
   sealed trait CharChain
   class Eps extends CharChain
-  class CharCons[c <: String, rest <: CharChain] extends CharChain
-  infix type :|:[c <: String, rest <: CharChain] = CharCons[c, rest]
+  class :|:[c <: String, rest <: CharChain] extends CharChain
 
   type Result[tp <: Tap] = tp match
     case Tape[lt, rt] => ReverseStr[FromCharChain[lt]] + FromCharChain[ReverseChain[RemoveBlanksFront[ReverseChain[rt]]]]
