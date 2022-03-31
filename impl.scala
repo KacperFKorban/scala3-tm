@@ -4,60 +4,42 @@ import scala.compiletime.ops.*
 import scala.compiletime.ops.string.*
 import scala.compiletime.ops.any.*
 import scala.compiletime.ops.boolean.*
-import scala.util.chaining
 
 private[tm] object TMImpl {
 
   sealed trait Tap
-  class Tape[Left <: CharChain, Right <: CharChain] extends Tap
-
-  sealed trait CharChain
-  class Eps extends CharChain
-  class :|:[c <: String, rest <: CharChain] extends CharChain
+  class Tape[Left <: String, Right <: String] extends Tap
 
   type Result[tp <: Tap] = tp match
-    case Tape[lt, rt] => ReverseStr[FromCharChain[lt]] + FromCharChain[ReverseChain[RemoveBlanksFront[ReverseChain[rt]]]]
+    case Tape[lt, rt] => ReverseStr[lt] + ReverseStr[RemoveBlanksFront[ReverseStr[rt]]]
 
-  type RemoveBlanksFront[chain <: CharChain] = chain match
-    case Eps => Eps
-    case "_" :|: rest => RemoveBlanksFront[rest]
-    case _ => chain
+  type RemoveBlanksFront[str <: String] = str match
+    case "" => ""
+    case _ => HeadStr[str] match
+      case "_" => RemoveBlanksFront[TailStr[str]]
+      case _ => str
 
   type ReverseStr[str <: String] = str match
     case "" => ""
     case _ => ReverseStr[TailStr[str]] + HeadStr[str]
 
+  type HeadStrSafe[str <: String] = str match
+    case "" => "_"
+    case _ => HeadStr[str]
+
+  type TailStrSafe[str <: String] = str match
+    case "" => ""
+    case _ => TailStr[str]
+
   type TailStr[str <: String] = Substring[str, 1, Length[str]]
 
   type HeadStr[str <: String] = Substring[str, 0, 1]
 
-  type HeadChain[chain <: CharChain] = chain match
-    case Eps => "_"
-    case c :|: _ => c
-
-  type TailChain[chain <: CharChain] = chain match
-    case Eps => Eps
-    case _ :|: rest => rest
-
   type CurrentChar[tape <: Tap] = tape match
-    case Tape[_, rt] => HeadChain[rt]
-
-  type ToCharChain[str <: String] = str match
-    case "" => Eps
-    case _ => HeadStr[str] :|: ToCharChain[TailStr[str]]
-
-  type FromCharChain[chain <: CharChain] = chain match
-    case Eps => ""
-    case c :|: rest => ToString[c] + FromCharChain[rest]
-
-  type ReverseChain[chain <: CharChain] = ReverseChainGo[chain, Eps]
-
-  type ReverseChainGo[chain <: CharChain, acc <: CharChain] = chain match
-    case Eps => acc
-    case c :|: rest => ReverseChainGo[rest, c :|: acc]
+    case Tape[_, rt] => HeadStrSafe[rt]
 
   type Eval[tm <: TMs, in <: String] = tm match
-    case TM[s0, actions] => Result[EvalGo[s0, Tape[Eps, ToCharChain[in]], actions]]
+    case TM[s0, actions] => Result[EvalGo[s0, Tape["", in], actions]]
 
   type EvalGo[s <: Int, tape <: Tap, actions <: Actions] = FindAction[s, CurrentChar[tape], actions] match
     case Some[(st, ct, m)] => EvalGo[st, MakeMove[tape, m, ct], actions]
@@ -73,8 +55,8 @@ private[tm] object TMImpl {
   type MakeMove[tape <: Tap, m <: Move, c <: String] = tape match
     case Tape[lt, rt] => m match
       case L => lt match
-        case Eps => Tape[Eps, c :|: TailChain[rt]]
-        case ltHead :|: ltRest => Tape[ltRest, ltHead :|: c :|: TailChain[rt]]
-      case R => Tape[c :|: lt, TailChain[rt]]
+        case "" => Tape["", c + TailStrSafe[rt]]
+        case _ => Tape[TailStr[lt], HeadStr[lt] + c + TailStrSafe[rt]]
+      case R => Tape[c + lt, TailStrSafe[rt]]
 
 }
